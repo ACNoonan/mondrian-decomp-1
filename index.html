@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mondrian Decomp 1</title>
+<meta name="description" content="75 paintings by Adam Noonan, each one a p5.js sketch written by an open model. Run any of them live.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #fff; --text: #1a1a1a; --dim: #777; --rule: #1a1a1a; --soft: rgba(0,0,0,.12); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font: 300 14px/1.7 'JetBrains Mono', monospace; }
+  header { max-width: 1200px; margin: 0 auto; padding: 56px 16px 24px; }
+  h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); letter-spacing: -0.02em; line-height: 1.15; }
+  header p { color: var(--dim); margin-top: 8px; max-width: 64ch; }
+  header a { color: var(--text); text-underline-offset: 3px; }
+  .grid { max-width: 1200px; margin: 0 auto; padding: 0 16px 80px; display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .grid button { all: unset; cursor: pointer; display: block; }
+  .grid img { display: block; width: 100%; aspect-ratio: 1; border: 1px solid var(--soft); }
+  .grid span { display: block; font-size: 11px; color: var(--dim); margin-top: 3px; }
+  .grid button:focus-visible img { outline: 2px solid var(--text); outline-offset: 2px; }
+  .view { position: fixed; inset: 0; background: rgba(255,255,255,.98); z-index: 10; display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; padding: 64px 24px 24px; }
+  .view[hidden] { display: none; }
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 12px; min-height: 0; }
+  .stage iframe { width: min(100%, 72vh); aspect-ratio: 1; border: 1px solid var(--soft); background: #fff; }
+  .meta { font-size: 12px; color: var(--dim); text-align: center; max-width: 60ch; }
+  pre { overflow: auto; font: 400 12px/1.6 'JetBrains Mono', monospace; background: #f6f5f1;
+        border: 1px solid var(--soft); padding: 16px; min-height: 0; }
+  .controls { position: absolute; top: 14px; left: 24px; right: 24px; display: flex; gap: 8px; align-items: center; }
+  .controls button, .controls a { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--rule);
+          border-radius: 3px; padding: 4px 12px; cursor: pointer; text-decoration: none; font-size: 13px; }
+  .controls button:hover, .controls a:hover { background: var(--text); color: var(--bg); }
+  .controls .count { margin: 0 8px; color: var(--dim); }
+  .controls .grow { flex: 1; }
+  @media (max-width: 800px) {
+    .view { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); overflow: auto; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mondrian Decomp 1</h1>
+  <p>75 paintings, each one a p5.js sketch written by an open model and chosen by
+     <a href="https://adamnoonan.xyz/art/mondrian-decomp/">Adam Noonan</a>. Click one to run its code live.
+     Source on <a href="https://github.com/ACNoonan/mondrian-decomp-1">GitHub</a>, weights on
+     <a href="https://huggingface.co/adamcnoonan/mondrian-decomp-1-lora">Hugging Face</a>.</p>
+</header>
+<main class="grid" id="grid"></main>
+<div class="view" id="view" hidden role="dialog" aria-modal="true" aria-label="Painting">
+  <div class="controls">
+    <button id="prev" aria-label="Previous painting">&larr;</button>
+    <button id="next" aria-label="Next painting">&rarr;</button>
+    <span class="count" id="count"></span>
+    <span class="grow"></span>
+    <a id="raw" target="_blank" rel="noopener">sketch.js</a>
+    <button id="close" aria-label="Close">&times;</button>
+  </div>
+  <div class="stage">
+    <iframe id="frame" title="Live sketch" sandbox="allow-scripts"></iframe>
+    <p class="meta" id="meta"></p>
+  </div>
+  <pre id="code"></pre>
+</div>
+<script>
+const P5 = 'https://cdn.jsdelivr.net/npm/p5@2.3.2/lib/p5.min.js';
+const $ = id => document.getElementById(id);
+let catalog = [], at = 0;
+
+const page = code => `<!doctype html><html><head><meta charset="utf-8">
+<script src="${P5}"><\/script>
+<style>html,body{margin:0;overflow:hidden;background:#fff}canvas{width:100vw!important;height:100vw!important;display:block}</style>
+</head><body><script>${code.replace(/<\/script/gi, '<\\/script')}<\/script></body></html>`;
+
+async function show(i) {
+  at = (i + catalog.length) % catalog.length;
+  const c = catalog[at];
+  $('count').textContent = `${c.n} / ${catalog.length}`;
+  $('raw').href = c.sketch;
+  $('meta').textContent = `${c.model} · system prompt ${c.system_prompt.split('/').pop().replace('.txt', '')}` +
+    (c.rule_filter ? ' + rule filter' : '') + ` · "${c.user_prompt}"`;
+  const code = await fetch(c.sketch).then(r => r.text());
+  if (catalog[at] !== c) return;
+  $('code').textContent = code;
+  $('frame').srcdoc = page(code);
+  history.replaceState(null, '', '#' + c.n);
+}
+
+function open(i) { $('view').hidden = false; document.body.style.overflow = 'hidden'; show(i); $('next').focus(); }
+function close() { $('view').hidden = true; document.body.style.overflow = ''; history.replaceState(null, '', location.pathname); }
+
+$('prev').onclick = () => show(at - 1);
+$('next').onclick = () => show(at + 1);
+$('close').onclick = close;
+document.addEventListener('keydown', e => {
+  if ($('view').hidden) return;
+  if (e.key === 'Escape') close();
+  else if (e.key === 'ArrowRight') show(at + 1);
+  else if (e.key === 'ArrowLeft') show(at - 1);
+});
+
+fetch('catalog.json').then(r => r.json()).then(list => {
+  catalog = list;
+  $('grid').replaceChildren(...list.map((c, i) => {
+    const b = document.createElement('button');
+    b.innerHTML = `<img src="${c.painting}" alt="Mondrian Decomp 1 no. ${c.n}" loading="lazy"><span>${c.n}</span>`;
+    b.onclick = () => open(i);
+    return b;
+  }));
+  const n = parseInt(location.hash.slice(1), 10);
+  if (n >= 1 && n <= list.length) open(n - 1);
+});
+</script>
+</body>
+</html>

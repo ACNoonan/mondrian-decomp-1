@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use these paintings or sketches, please cite them as below."
+title: "Mondrian Decomp 1"
+type: dataset
+authors:
+  - family-names: Noonan
+    given-names: Adam
+    orcid: "https://orcid.org/0009-0000-7506-6395"
+date-released: 2026-11-11
+url: "https://adamnoonan.xyz/art/mondrian-decomp/"
+repository-code: "https://github.com/ACNoonan/mondrian-decomp-1"
+license: MIT
+keywords:
+  - generative art
+  - p5.js
+  - Mondrian
+  - De Stijl
+  - LLM code generation
